@@ -226,6 +226,7 @@
             box-shadow: 0 8px 40px rgba(0,0,0,0.5);
             border: 3px solid var(--surface2);
             user-select: none;
+            background: #0f172a;
         }
 
         .square {
@@ -264,10 +265,33 @@
         .piece {
             font-size: min(3.5rem, 9vw);
             line-height: 1;
-            filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35));
             cursor: grab;
             transition: transform 0.1s;
             z-index: 1;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.35);
+        }
+
+        .piece-white {
+            color: #ffffff;
+            -webkit-text-stroke: 1.25px #1f2937;
+        }
+
+        .piece-black {
+            color: #111827;
+            -webkit-text-stroke: 1px #f8fafc;
+        }
+
+        .piece.piece-white {
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 1px rgba(0,0,0,0.8);
+            filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.4));
+        }
+
+        .piece.piece-black {
+            color: #1a1a1a;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.3);
+            filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.2));
         }
 
         .piece:active { cursor: grabbing; transform: scale(1.1); }
@@ -392,27 +416,27 @@
         }
 
         .message-info {
-            background: rgba(108, 99, 255, 0.15);
-            color: var(--accent);
-            border: 1px solid rgba(108, 99, 255, 0.3);
+            background: rgba(108, 99, 255, 0.2);
+            color: #c6c3ff;
+            border: 1px solid rgba(108, 99, 255, 0.4);
         }
 
         .message-success {
-            background: rgba(78, 205, 196, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(78, 205, 196, 0.3);
+            background: rgba(78, 205, 196, 0.2);
+            color: #99f6e4;
+            border: 1px solid rgba(78, 205, 196, 0.4);
         }
 
         .message-error {
-            background: rgba(255, 101, 132, 0.15);
-            color: var(--accent2);
-            border: 1px solid rgba(255, 101, 132, 0.3);
+            background: rgba(255, 101, 132, 0.22);
+            color: #ff9bb0;
+            border: 1px solid rgba(255, 101, 132, 0.45);
         }
 
         .message-thinking {
-            background: rgba(255, 230, 109, 0.15);
-            color: var(--warning);
-            border: 1px solid rgba(255, 230, 109, 0.3);
+            background: rgba(255, 230, 109, 0.2);
+            color: #fff2a3;
+            border: 1px solid rgba(255, 230, 109, 0.45);
         }
 
         .puzzle-selector {
@@ -648,7 +672,7 @@ const PUZZLES = [
         id: 1, difficulty: 'easy', title: 'Matas vienu ėjimu',
         description: 'Baltieji duoda matą vienu ėjimu.',
         fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1',
-        solution: ['f3h5f7'], solutionMoves: ['Qxf7#'],
+        solution: ['h5f7'], solutionMoves: ['Qxf7#'],
         theme: 'Akademinis matas'
     },
     {
@@ -690,7 +714,7 @@ const PUZZLES = [
         id: 7, difficulty: 'medium', title: 'Šakės taktika',
         description: 'Juodieji naudoja žirgo šakę.',
         fen: 'r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4',
-        solution: ['f1c4d5', 'c6b4'], solutionMoves: ['Bd5', 'Nb4'],
+        solution: ['c4d5', 'c6b4'], solutionMoves: ['Bd5', 'Nb4'],
         theme: 'Šakė'
     },
     {
@@ -948,8 +972,9 @@ function renderBoard() {
 
             if (board[dispR][dispC]) {
                 const pieceEl = document.createElement('span');
-                pieceEl.className = 'piece';
-                pieceEl.innerHTML = PIECES[board[dispR][dispC]];
+                const piece = board[dispR][dispC];
+                pieceEl.className = 'piece piece-' + (piece === piece.toUpperCase() ? 'white' : 'black');
+                pieceEl.innerHTML = PIECES[piece];
                 sq.appendChild(pieceEl);
             }
 
@@ -1016,6 +1041,7 @@ function makeMove(fromRow, fromCol, toRow, toCol) {
     const puzzle = getFilteredPuzzles()[state.currentPuzzle % getFilteredPuzzles().length];
     const moveStr = getMoveNotation(fromRow, fromCol, toRow, toCol);
     const expectedMoves = puzzle.solution;
+    if (state.currentMoveIndex >= expectedMoves.length) return;
 
     const piece = state.board[fromRow][fromCol];
     // Handle castling rook movement
@@ -1041,9 +1067,11 @@ function makeMove(fromRow, fromCol, toRow, toCol) {
     state.selectedSquare = null;
     state.validMoves = [];
 
-    if (state.currentMoveIndex < expectedMoves.length &&
-        (moveStr === expectedMoves[state.currentMoveIndex] ||
-         moveStr.substring(0,4) === expectedMoves[state.currentMoveIndex].substring(0,4))) {
+    const expectedMove = expectedMoves[state.currentMoveIndex];
+    const expectedFromTo = expectedMove.length >= 4 ? expectedMove.substring(0, 4) : expectedMove;
+    const isCorrect = moveStr === expectedMove || moveStr === expectedFromTo;
+
+    if (state.currentMoveIndex < expectedMoves.length && isCorrect) {
         state.moveHistory.push({
             move: puzzle.solutionMoves[state.currentMoveIndex] || moveStr,
             correct: true
@@ -1063,15 +1091,16 @@ function makeMove(fromRow, fromCol, toRow, toCol) {
         renderMoveList();
         setMessage('Neteisingas ėjimas. Bandykite dar kartą!', 'error');
         setTimeout(() => {
-            state.board[fromRow][fromCol] = state.board[toRow][toCol];
-            state.board[toRow][toCol] = state.lastMove ? null : null;
-            undoLastBoardMove(fromRow, fromCol, toRow, toCol, piece);
+            undoLastBoardMove();
             renderBoard();
+            renderMoveList();
+            setMessage('Spauskite ant figūros ir atlikite ėjimą', 'info');
         }, 700);
     }
 }
 
-function undoLastBoardMove(fromRow, fromCol, toRow, toCol, piece) {
+function undoLastBoardMove() {
+    state.moveHistory.pop();
     state.board = parseFEN(getFilteredPuzzles()[state.currentPuzzle % getFilteredPuzzles().length].fen);
     for (let i = 0; i < state.currentMoveIndex; i++) {
         const move = getFilteredPuzzles()[state.currentPuzzle % getFilteredPuzzles().length].solution[i];
@@ -1088,8 +1117,9 @@ function makeComputerMove() {
     if (state.currentMoveIndex >= puzzle.solution.length) return;
 
     const move = puzzle.solution[state.currentMoveIndex];
-    const from = algebraicToSquare(move.substring(0,2));
-    const to = algebraicToSquare(move.substring(2,4));
+    const moveFromTo = move.length >= 4 ? move.substring(0, 4) : move;
+    const from = algebraicToSquare(moveFromTo.substring(0, 2));
+    const to = algebraicToSquare(moveFromTo.substring(2, 4));
 
     state.animating = true;
     setMessage('Priešininko ėjimas...', 'thinking');
